@@ -1,0 +1,106 @@
+module shift_register(
+input clk,
+input reset,
+input shift_left,
+input shift_right,
+input load,
+input serial_in,
+input [3:0] parallel_in,
+output reg [3:0] parallel_out,
+output serial_out
+);
+
+assign serial_out = parallel_out[0];
+
+always @(posedge clk or posedge reset)
+begin
+
+if(reset)
+parallel_out <= 4'b0000;
+
+else if(load)
+parallel_out <= parallel_in;     // PISO Load
+
+else if(shift_left)
+parallel_out <= {parallel_out[2:0], serial_in};   // Shift Left
+
+else if(shift_right)
+parallel_out <= {serial_in, parallel_out[3:1]};   // Shift Right
+
+end
+
+endmodule
+
+
+
+`timescale 1ns/1ps
+
+module testbench;
+
+reg clk;
+reg reset;
+reg shift_left;
+reg shift_right;
+reg load;
+reg serial_in;
+reg [3:0] parallel_in;
+
+wire [3:0] parallel_out;
+wire serial_out;
+
+shift_register uut(
+.clk(clk),
+.reset(reset),
+.shift_left(shift_left),
+.shift_right(shift_right),
+.load(load),
+.serial_in(serial_in),
+.parallel_in(parallel_in),
+.parallel_out(parallel_out),
+.serial_out(serial_out)
+);
+
+always #5 clk = ~clk;
+
+initial
+begin
+
+$dumpfile("dump.vcd");
+$dumpvars(0,testbench);
+
+clk = 0;
+reset = 1;
+shift_left = 0;
+shift_right = 0;
+load = 0;
+
+#10
+reset = 0;
+
+// Parallel Load
+
+parallel_in = 4'b1011;
+load = 1;
+#10
+load = 0;
+
+// Shift Right
+
+serial_in = 1;
+shift_right = 1;
+#20
+shift_right = 0;
+
+// Shift Left
+
+serial_in = 0;
+shift_left = 1;
+#20
+shift_left = 0;
+
+#20
+$finish;
+
+end
+
+endmodule
